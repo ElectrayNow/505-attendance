@@ -6,4 +6,4 @@
 // 3. Paste the URL here, between the single quotes.
 // ==========================================================================================
 
-export const APPS_SCRIPT_URL = 'PASTE_YOUR_DEPLOYED_APPS_SCRIPT_URL_HERE';
+export const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyjzC4WZY7hwsswl-09nUapKuINMqQmNEHz4C9QTYCqTWs-ryV4rlbxpSJ_BUhB5rgfVw/exec';
