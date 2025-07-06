@@ -6,4 +6,4 @@
 // 3. Paste the URL here, between the single quotes.
 // ==========================================================================================
 
-export const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz6VPTYQpni9XvjrwaaadQnv9cTjhcHawLxrG3cJTtLzDNy5pf_BS9hNYBRxqhkTc1Cyg/exec';
+export const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwPhJaSl4KiU4U3lz1EsEXkEJxAmdI1cdaJq5sjBsEN6QpCvYGiXqfDW1mVxhwnqX_4iw/exec';
