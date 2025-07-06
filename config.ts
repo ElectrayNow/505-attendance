@@ -6,7 +6,7 @@
 // 3. Paste the URL here, between the single quotes.
 // ==========================================================================================
 
-export const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwPhJaSl4KiU4U3lz1EsEXkEJxAmdI1cdaJq5sjBsEN6QpCvYGiXqfDW1mVxhwnqX_4iw/exec';
+export const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyJbJJlgSfTRBhmvmTHwqcV2T-USZuauDKR5GN6ceB1pCz364IxRFVA-Sd2BVMdpX_CfQ/exec';
 export const showToast = (message: string, type: 'success' | 'error' = 'success') => {
   const toast = document.createElement('div');
   toast.textContent = message;
