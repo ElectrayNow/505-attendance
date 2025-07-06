@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Batch, Student, Session, AttendanceStatus, SortOption, User, UserRole } from './types';
 import { INITIAL_BATCHES, INITIAL_STUDENTS, INITIAL_SESSIONS, INITIAL_USERS } from './constants';
+// <--- MISSING #1: Imports for the backend URL and toast notifications
+import { APPS_SCRIPT_URL, showToast } from './config'; 
 import Header from './components/Header';
 import LoginPage from './components/LoginPage';
 import BatchCard from './components/BatchCard';
@@ -23,6 +25,8 @@ const App: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<SortOption>('name-asc');
   const [isBatchModalOpen, setBatchModalOpen] = useState(false);
   const [editingBatch, setEditingBatch] = useState<Batch | null>(null);
+  // <--- MISSING #2: State to track the saving process for user feedback
+  const [isSaving, setIsSaving] = useState(false); 
 
   const selectedBatch = useMemo(() => {
     if (!selectedBatchId) return null;
@@ -61,8 +65,61 @@ const App: React.FC = () => {
     setView('batchDetail');
   };
 
-  const handleSaveAttendance = (updatedSession: Session) => {
+  // <--- MISSING #3: The entire implementation to send data to the backend.
+  // This is the most important missing piece.
+  const handleSaveAttendance = async (updatedSession: Session) => {
+    if (!selectedBatch || !updatedSession) {
+      showToast("Error: No batch or session selected.", 'error');
+      return;
+    }
+    
+    // 1. Update local state immediately for a responsive UI
     setSessions(prevSessions => prevSessions.map(s => s.id === updatedSession.id ? updatedSession : s));
+    
+    // 2. Check if the script URL is configured
+    if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'PASTE_YOUR_DEPLOYED_APPS_SCRIPT_URL_HERE') {
+      showToast("Backend not configured. Data not saved to Sheet.", 'error');
+      console.error("APPS_SCRIPT_URL is not set in config.ts. Attendance data is only saved locally.");
+      return;
+    }
+
+    setIsSaving(true);
+    
+    // 3. Prepare the data payload for the Google Apps Script
+    const payload = {
+      batchName: selectedBatch.name,
+      sessionDate: updatedSession.date,
+      classNumber: updatedSession.classNumber,
+      attendance: updatedSession.attendance,
+      students: students.filter(student => 
+        updatedSession.attendance.some(a => a.studentId === student.id)
+      ),
+    };
+
+    // 4. Send the data to the backend
+    try {
+      const response = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+      
+      if (result.status === 'success') {
+        showToast('Attendance saved to Google Sheet!', 'success');
+      } else {
+        throw new Error(result.message || 'An unknown error occurred.');
+      }
+    } catch (error) {
+      console.error('Error saving to Google Sheet:', error);
+      showToast(`Error saving to Sheet: ${error.message}`, 'error');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleAddStudent = useCallback((batchId: number, studentName: string) => {
@@ -117,7 +174,7 @@ const App: React.FC = () => {
 
     const existingSessionsCount = sessions.filter(s => s.batchId === batchId).length;
     if (existingSessionsCount >= batch.totalSessions) {
-      console.error("Cannot create new class, batch is full.");
+      showToast("Cannot start new class: maximum sessions reached.", 'error');
       return;
     }
 
@@ -230,7 +287,46 @@ const App: React.FC = () => {
     switch(view) {
       case 'login':
         return <LoginPage onLogin={handleLogin} users={INITIAL_USERS} />;
-      case 'batches':
+      // ... (rest of the cases are the same)
+      case 'batchDetail':
+        if (!selectedBatch) return null;
+        const instructor = INITIAL_USERS.find(u => u.id === selectedBatch.instructorId);
+        return (
+          <BatchDetail 
+            batch={selectedBatch}
+            students={studentsForSelectedBatch}
+            sessions={sessionsForSelectedBatch}
+            instructorName={instructor?.name || 'Unassigned'}
+            onBack={handleBackToBatches}
+            onSelectSession={handleSelectSession}
+            onAddStudent={handleAddStudent}
+            onRemoveStudent={handleRemoveStudentFromBatch}
+            onStartNewClass={handleStartNewClass}
+            currentUser={currentUser}
+            onDeleteBatch={handleDeleteBatch}
+            onEditBatch={() => handleOpenEditBatchModal(selectedBatch)}
+            onDeleteSession={handleDeleteSession}
+            onUpdateSessionDate={handleUpdateSessionDate}
+          />
+        );
+      case 'attendance':
+        if (!selectedBatch || !selectedSession) return null;
+        const studentsForSession = students.filter(student => 
+          selectedSession.attendance.some(a => a.studentId === student.id)
+        );
+        return (
+          <AttendanceGrid 
+            batch={selectedBatch} 
+            session={selectedSession}
+            students={studentsForSession} 
+            onBack={handleBackToBatchDetail} 
+            onSave={handleSaveAttendance}
+            // <--- MISSING: Passing the isSaving prop to the grid
+            isSaving={isSaving} 
+          />
+        );
+      default:
+        // Render batches view by default if view is not login/detail/attendance
         return (
           <div>
             <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
@@ -277,41 +373,6 @@ const App: React.FC = () => {
               })}
             </div>
           </div>
-        );
-      case 'batchDetail':
-        if (!selectedBatch) return null;
-        const instructor = INITIAL_USERS.find(u => u.id === selectedBatch.instructorId);
-        return (
-          <BatchDetail 
-            batch={selectedBatch}
-            students={studentsForSelectedBatch}
-            sessions={sessionsForSelectedBatch}
-            instructorName={instructor?.name || 'Unassigned'}
-            onBack={handleBackToBatches}
-            onSelectSession={handleSelectSession}
-            onAddStudent={handleAddStudent}
-            onRemoveStudent={handleRemoveStudentFromBatch}
-            onStartNewClass={handleStartNewClass}
-            currentUser={currentUser}
-            onDeleteBatch={handleDeleteBatch}
-            onEditBatch={() => handleOpenEditBatchModal(selectedBatch)}
-            onDeleteSession={handleDeleteSession}
-            onUpdateSessionDate={handleUpdateSessionDate}
-          />
-        );
-      case 'attendance':
-        if (!selectedBatch || !selectedSession) return null;
-        const studentsForSession = students.filter(student => 
-          selectedSession.attendance.some(a => a.studentId === student.id)
-        );
-        return (
-          <AttendanceGrid 
-            batch={selectedBatch} 
-            session={selectedSession}
-            students={studentsForSession} 
-            onBack={handleBackToBatchDetail} 
-            onSave={handleSaveAttendance}
-          />
         );
     }
   };
