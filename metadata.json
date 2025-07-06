@@ -1,0 +1,5 @@
+{
+  "name": "DanceBatch Attendance",
+  "description": "A modern application for tracking student attendance in dance batches. It allows instructors to easily mark and save attendance directly to a Google Sheet.",
+  "requestFramePermissions": []
+}
